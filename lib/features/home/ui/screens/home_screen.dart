@@ -9,15 +9,23 @@ class HomeScreen extends StatelessWidget {
   final String username;
   final String fullName;
   final String email;
+  final Future<void> Function()? onSignOut;
 
   const HomeScreen({
     super.key,
     this.username = 'usuario',
     this.fullName = 'Nombre Apellido',
     this.email = 'correo@ejemplo.com',
+    this.onSignOut,
   });
 
-  void _signOut(BuildContext context) {
+  Future<void> _signOut(BuildContext context) async {
+    try {
+      await onSignOut?.call();
+    } catch (_) {
+      // Aunque falle la red, se vuelve al login.
+    }
+    if (!context.mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 

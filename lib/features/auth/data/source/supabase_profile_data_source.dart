@@ -21,4 +21,20 @@ class SupabaseProfileDataSource {
       throw AuthFailure(e.message);
     }
   }
+
+  Future<Profile> getProfile(String id) async {
+    try {
+      final row = await _client.from('profiles').select().eq('id', id).single();
+      return Profile(
+        id: row['id'] as String,
+        username: row['username'] as String,
+        fullName: row['full_name'] as String,
+      );
+    } on PostgrestException catch (e) {
+      if (e.code == 'PGRST116') {
+        throw const AuthFailure('Tu cuenta no tiene perfil guardado.');
+      }
+      throw AuthFailure(e.message);
+    }
+  }
 }

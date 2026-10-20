@@ -5,9 +5,14 @@ import 'package:lab5/features/auth/data/repository/auth_repository_impl.dart';
 import 'package:lab5/features/auth/data/repository/profile_repository_impl.dart';
 import 'package:lab5/features/auth/data/source/supabase_auth_data_source.dart';
 import 'package:lab5/features/auth/data/source/supabase_profile_data_source.dart';
-import 'package:lab5/features/auth/domain/entities/profile.dart';
+import 'package:lab5/features/auth/domain/repository/auth_repository.dart';
+import 'package:lab5/features/auth/domain/repository/profile_repository.dart';
+import 'package:lab5/features/auth/domain/usecases/sign_in_usecase.dart';
+import 'package:lab5/features/auth/domain/usecases/sign_out_usecase.dart';
 import 'package:lab5/features/auth/domain/usecases/sign_up_usecase.dart';
+import 'package:lab5/features/home/ui/home_args.dart';
 import 'package:lab5/features/home/ui/screens/home_screen.dart';
+import 'package:lab5/features/login/ui/bloc/login_bloc.dart';
 import 'package:lab5/features/login/ui/screens/login_screen.dart';
 import 'package:lab5/features/register/ui/bloc/register_bloc.dart';
 import 'package:lab5/features/register/ui/screens/register_screen.dart';
@@ -25,6 +30,12 @@ void main() async {
   runApp(const App());
 }
 
+AuthRepository _authRepository() =>
+    AuthRepositoryImpl(SupabaseAuthDataSource(Supabase.instance.client));
+
+ProfileRepository _profileRepository() =>
+    ProfileRepositoryImpl(SupabaseProfileDataSource(Supabase.instance.client));
+
 /// Root widget that declares the theme and the named routes.
 class App extends StatelessWidget {
   const App({super.key});
@@ -32,31 +43,29 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Moviles Auth',
+      title: 'Lab 5',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
       initialRoute: '/login',
       routes: {
-        '/login': (_) => const LoginScreen(),
+        '/login': (_) => BlocProvider(
+          create: (_) =>
+              LoginBloc(SignInUseCase(_authRepository(), _profileRepository())),
+          child: const LoginScreen(),
+        ),
         '/register': (_) => BlocProvider(
           create: (_) => RegisterBloc(
-            SignUpUseCase(
-              AuthRepositoryImpl(
-                SupabaseAuthDataSource(Supabase.instance.client),
-              ),
-              ProfileRepositoryImpl(
-                SupabaseProfileDataSource(Supabase.instance.client),
-              ),
-            ),
+            SignUpUseCase(_authRepository(), _profileRepository()),
           ),
           child: const RegisterScreen(),
         ),
         '/home': (context) {
-          final profile = ModalRoute.of(context)!.settings.arguments;
-          if (profile is! Profile) return const HomeScreen();
+          final args = ModalRoute.of(context)!.settings.arguments as HomeArgs;
           return HomeScreen(
-            username: profile.username,
-            fullName: profile.fullName,
+            username: args.profile.username,
+            fullName: args.profile.fullName,
+            email: args.email,
+            onSignOut: SignOutUseCase(_authRepository()).call,
           );
         },
       },
